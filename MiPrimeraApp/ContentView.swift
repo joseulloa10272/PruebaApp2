@@ -1,24 +1,27 @@
-//
-//  ContentView.swift
-//  MiPrimeraApp
-//
-//  Created by Eddye Carrillo Ulloa on 15/3/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @State private var mensaje = "Hola, mundo!"
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        VStack(spacing: 20) {
+            Text(mensaje)
+                .font(.title)
+                .padding()
+            Button("Presióname") {
+                mensaje = "Has presionado el botón"
+            }
+            .padding()
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .cornerRadius(10)
         }
-        .padding()
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }
+
