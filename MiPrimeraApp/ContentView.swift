@@ -1,107 +1,106 @@
 import SwiftUI
 
-struct BluetoothDevice: Identifiable {
-    let id = UUID()
-    let nombre: String
-    var conectado: Bool
-}
-
 struct ContentView: View {
-    @State private var mostrarMensaje = false
-    @State private var bluetoothActivo = false
-    @State private var dispositivos = [
-        BluetoothDevice(nombre: "Audífonos Pro", conectado: false),
-        BluetoothDevice(nombre: "Teclado Inalámbrico", conectado: false),
-        BluetoothDevice(nombre: "Bocina Portátil", conectado: false)
-    ]
+    @StateObject private var viewModel = DeviceViewModel()
+    @State private var vibrationEnabled = false
 
     var body: some View {
-        ZStack {
-            Color.blue
-                .ignoresSafeArea()
-
+        NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    Button("Presióname") {
-                        mostrarMensaje = true
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.white)
-                    .foregroundColor(.blue)
-                    .cornerRadius(10)
-
-                    if mostrarMensaje {
-                        Text("¡Lo logré!")
-                            .font(.title2)
-                            .bold()
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(.white)
-                            .padding(.horizontal)
-                    }
-
-                    bluetoothSection
+                VStack(spacing: 16) {
+                    connectionCard
+                    actionCard
+                    sensitivityCard
+                    logCard
                 }
                 .padding()
             }
+            .navigationTitle("Posture BLE Prototype")
         }
     }
 
-    private var bluetoothSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Conexiones Bluetooth")
-                .font(.title3)
-                .bold()
-                .foregroundColor(.white)
+    private var connectionCard: some View {
+        GroupBox("Estado del dispositivo") {
+            VStack(alignment: .leading, spacing: 10) {
+                statusRow("Estado", viewModel.connectionState.rawValue)
+                statusRow("Dispositivo", viewModel.deviceName)
+                statusRow("Último dato", viewModel.latestData)
 
-            Toggle(isOn: $bluetoothActivo) {
-                Text(bluetoothActivo ? "Bluetooth activado" : "Bluetooth desactivado")
-                    .foregroundColor(.white)
-            }
-            .toggleStyle(SwitchToggleStyle(tint: .green))
+                HStack(spacing: 12) {
+                    Button(viewModel.isConnected ? "Desconectar" : "Conectar") {
+                        viewModel.isConnected ? viewModel.disconnect() : viewModel.connectOrScan()
+                    }
+                    .buttonStyle(.borderedProminent)
 
-            if bluetoothActivo {
-                VStack(spacing: 12) {
-                    ForEach(dispositivos.indices, id: \.self) { index in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(dispositivos[index].nombre)
-                                    .font(.headline)
-                                Text(dispositivos[index].conectado ? "Conectado" : "Disponible")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-
-                            Spacer()
-
-                            Button(dispositivos[index].conectado ? "Desconectar" : "Conectar") {
-                                dispositivos[index].conectado.toggle()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(dispositivos[index].conectado ? Color.red : Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                        }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
+                    if !viewModel.isConnected {
+                        Text("Busca \(BLEConstants.expectedDeviceName)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
-            } else {
-                Text("Activa Bluetooth para buscar y conectar dispositivos.")
-                    .font(.footnote)
-                    .foregroundColor(.white.opacity(0.9))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var actionCard: some View {
+        GroupBox("Comandos") {
+            VStack(alignment: .leading, spacing: 12) {
+                Button("Enviar calibración") {
+                    viewModel.sendCalibration()
+                }
+                .buttonStyle(.bordered)
+
+                Toggle("Vibración", isOn: $vibrationEnabled)
+                    .onChange(of: vibrationEnabled) { _, newValue in
+                        viewModel.setVibration(enabled: newValue)
+                    }
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.2))
-        .cornerRadius(16)
+    }
+
+    private var sensitivityCard: some View {
+        GroupBox("Sensibilidad simulada") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Valor actual: \(Int(viewModel.sensitivity))")
+                Slider(value: $viewModel.sensitivity, in: 1...100, step: 1)
+                Button("Enviar sensibilidad") {
+                    viewModel.sendSensitivity()
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+    }
+
+    private var logCard: some View {
+        GroupBox("Registro de mensajes") {
+            if viewModel.logs.isEmpty {
+                Text("Sin mensajes todavía")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    ForEach(viewModel.logs.prefix(20)) { item in
+                        Text(item.displayText)
+                            .font(.caption)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        }
+    }
+
+    private func statusRow(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+                .fontWeight(.medium)
+            Spacer()
+            Text(value)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
+#Preview {
+    ContentView()
 }
